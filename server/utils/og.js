@@ -1,7 +1,18 @@
-import { writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Resvg } from '@resvg/resvg-js'
+import { Resvg, initWasm } from '@resvg/resvg-wasm'
+
+const require = createRequire(import.meta.url)
+let resvgReady
+
+function ensureResvg() {
+  if (!resvgReady) {
+    resvgReady = initWasm(readFileSync(require.resolve('@resvg/resvg-wasm/index_bg.wasm')))
+  }
+  return resvgReady
+}
 
 const FONT_SOURCES = [
   { url: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/dmsans/DMSans%5Bopsz%2Cwght%5D.ttf', filename: 'DMSans.ttf' },
@@ -51,6 +62,7 @@ export async function loadCommandsFor(version) {
 }
 
 export async function renderOgPng(svg) {
+  await ensureResvg()
   const fontFiles = await loadFontFiles()
 
   const resvg = new Resvg(svg, {
